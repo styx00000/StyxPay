@@ -1,0 +1,163 @@
+import { PolicyId, UTxO, Unit } from "lucid-cardano";
+import React, { useContext } from "react";
+import {
+    applyParamsToScript,
+    Data,
+    MintingPolicy,
+    fromText,
+    Datum,
+    PaymentKeyHash,
+    SpendingValidator,
+    UTxO,
+    TxHash,
+    Address,
+    AddressDetails,
+    getAddressDetails,
+    PublicKey,
+    sha256,
+    toHex,
+    C,
+    fromHex
+
+} from "lucid-cardano";
+import { AppStateContext } from "@/pages/_app";
+import { signAndSubmitTx } from "@/utilities/utilities";
+
+
+
+
+export default function MintNFT() {
+    const { appState, setAppState } = useContext(AppStateContext);
+    const { lucid, wAddr, newStakingRewardAddress, newStakingValidator,stakingList } = appState;
+
+    const getUtxo = async (address: string): Promise<UTxO> => {
+        const utxos = await lucid!.utxosAt(address);
+        const utxo = utxos[0];
+        return utxo;
+    };
+
+
+    const walletPaymentPKH = wAddr? getAddressDetails(wAddr).paymentCredential?.hash: ""
+
+    
+
+
+    const getStakeValidator = async (pkh,i): Promise<StakingValidator > => {
+        const Params =  Data.Tuple([Data.Bytes(), Data.Integer()]);
+        type Params = Data.Static<typeof Params>;
+
+
+       
+        const stakeValidator: StakingValidator = {
+            type: "PlutusV2",
+            script: applyParamsToScript<Params>(
+                "5908765908730100003232323322323232323232323232332232332232323232323232222232325335323232333353500122001253353300b35002220023500422002102113357389201194f776e65722773207369676e6174757265206d697373696e67000202020253353300b35002220023500422002102113357389201194f776e65722773207369676e6174757265206d697373696e670002020203333573466e1cd55cea80224000466442466002006004646464646464646464646464646666ae68cdc39aab9d500c480008cccccccccccc88888888888848cccccccccccc00403403002c02802402001c01801401000c008cd406806cd5d0a80619a80d00d9aba1500b33501a01c35742a014666aa03ceb94074d5d0a804999aa80f3ae501d35742a01066a03404e6ae85401cccd540780a1d69aba150063232323333573466e1cd55cea801240004664424660020060046464646666ae68cdc39aab9d5002480008cc8848cc00400c008cd40c9d69aba150023033357426ae8940088c98c80d4cd5ce01c01b81989aab9e5001137540026ae854008c8c8c8cccd5cd19b8735573aa004900011991091980080180119a8193ad35742a00460666ae84d5d1280111931901a99ab9c038037033135573ca00226ea8004d5d09aba2500223263203133573806806605e26aae7940044dd50009aba1500533501a75c6ae854010ccd540780908004d5d0a801999aa80f3ae200135742a004604c6ae84d5d1280111931901699ab9c03002f02b135744a00226ae8940044d5d1280089aba25001135744a00226ae8940044d5d1280089aba25001135744a00226ae8940044d55cf280089baa00135742a008602c6ae84d5d1280211931900f99ab9c02202101d3333573466e1cd55ce9baa0054800080808c98c8078cd5ce01081000e199109198008018011bae006375a00a203c264c6403866ae712401035054350001e135573ca00226ea800488d40088888888888894cd4ccd54c03c48004c848cc004894cd40088400c4004009406094cd4ccd5cd19b8f00e00102502413501a001150190042102510233200135501822112225335001135003220012213335005220023004002333553007120010050040011232230023758002640026aa030446666aae7c004940288cd4024c010d5d080118019aba2002018232323333573466e1cd55cea80124000466442466002006004601c6ae854008c014d5d09aba2500223263201633573803203002826aae7940044dd50009191919191999ab9a3370e6aae75401120002333322221233330010050040030023232323333573466e1cd55cea80124000466442466002006004602e6ae854008cd403c058d5d09aba2500223263201b33573803c03a03226aae7940044dd50009aba150043335500875ca00e6ae85400cc8c8c8cccd5cd19b875001480108c84888c008010d5d09aab9e500323333573466e1d4009200223212223001004375c6ae84d55cf280211999ab9a3370ea00690001091100191931900e99ab9c02001f01b01a019135573aa00226ea8004d5d0a80119a805bae357426ae8940088c98c805ccd5ce00d00c80a89aba25001135744a00226aae7940044dd5000899aa800bae75a224464460046eac004c8004d5405488c8cccd55cf80112804119a8039991091980080180118031aab9d5002300535573ca00460086ae8800c0584d5d080088910010910911980080200189119191999ab9a3370ea002900011a80398029aba135573ca00646666ae68cdc3a801240044a00e464c6402466ae7005405004003c4d55cea80089baa0011212230020031122001232323333573466e1d400520062321222230040053007357426aae79400c8cccd5cd19b875002480108c848888c008014c024d5d09aab9e500423333573466e1d400d20022321222230010053007357426aae7940148cccd5cd19b875004480008c848888c00c014dd71aba135573ca00c464c6402066ae7004c04803803403002c4d55cea80089baa001232323333573466e1cd55cea80124000466442466002006004600a6ae854008dd69aba135744a004464c6401866ae7003c0380284d55cf280089baa0012323333573466e1cd55cea800a400046eb8d5d09aab9e500223263200a33573801a01801026ea80048c8c8c8c8c8cccd5cd19b8750014803084888888800c8cccd5cd19b875002480288488888880108cccd5cd19b875003480208cc8848888888cc004024020dd71aba15005375a6ae84d5d1280291999ab9a3370ea00890031199109111111198010048041bae35742a00e6eb8d5d09aba2500723333573466e1d40152004233221222222233006009008300c35742a0126eb8d5d09aba2500923333573466e1d40192002232122222223007008300d357426aae79402c8cccd5cd19b875007480008c848888888c014020c038d5d09aab9e500c23263201333573802c02a02202001e01c01a01801626aae7540104d55cf280189aab9e5002135573ca00226ea80048c8c8c8c8cccd5cd19b875001480088ccc888488ccc00401401000cdd69aba15004375a6ae85400cdd69aba135744a00646666ae68cdc3a80124000464244600400660106ae84d55cf280311931900619ab9c00f00e00a009135573aa00626ae8940044d55cf280089baa001232323333573466e1d400520022321223001003375c6ae84d55cf280191999ab9a3370ea004900011909118010019bae357426aae7940108c98c8024cd5ce00600580380309aab9d50011375400224464646666ae68cdc3a800a40084244400246666ae68cdc3a8012400446424446006008600c6ae84d55cf280211999ab9a3370ea00690001091100111931900519ab9c00d00c008007006135573aa00226ea80048c8cccd5cd19b8750014800880188cccd5cd19b8750024800080188c98c8018cd5ce00480400200189aab9d37540029309100109100089000a490350543100112323001001223300330020020011",
+                [String(pkh),BigInt(i)],
+                Params
+            ),
+        };
+
+   
+        setAppState({
+            ...appState,
+           
+        });
+        
+
+    
+
+        return {stakeValidator};
+    };
+
+
+
+    const makeRewardAddress = async (index) => {
+        
+            
+            const {stakeValidator} = await getStakeValidator(walletPaymentPKH,index);
+
+            const stakingvalidatorRewardAddress = lucid!.utils.validatorToRewardAddress(stakeValidator)
+            
+            const stakingCred = lucid!.utils.stakeCredentialOf(stakingvalidatorRewardAddress)
+            
+            const paymentCred = lucid!.utils.keyHashToCredential(walletPaymentPKH) 
+
+            const frankensteinAddress = lucid!.utils.credentialToAddress(paymentCred,stakingCred)
+
+           
+
+
+            setAppState({
+                ...appState,
+
+                newStakingRewardAddress: stakingvalidatorRewardAddress,
+                newStakingValidator: stakeValidator,
+               
+            });
+
+            return {frankensteinAddress,stakingvalidatorRewardAddress,stakeValidator}
+
+
+            
+   
+            
+     }
+
+
+    const makeRewardAddressList = async () => {
+
+        const list =[]
+
+
+        for (let index =1;index<5;index++) {
+
+            list.push(await makeRewardAddress(index))
+
+        }
+
+
+        
+            
+       
+
+
+        setAppState({
+            ...appState,
+
+            stakingList: list,
+
+        
+           
+        });
+
+        console.log(list)
+
+
+        
+
+        
+ }
+
+     
+
+
+     
+
+
+
+
+
+
+
+
+    return (
+        <button
+            onClick={makeRewardAddressList}
+            style={{backgroundColor: "red"}}
+            className=" bg-zinc-800 text-white font-quicksand text-lg font-bold py-3 px-8 rounded-lg  active:translate-y-[2px] active:shadow-[0_4px_0px_0px_rgba(0,0,0,0.6)] disabled:active:translate-y-0 disabled:active:shadow-[0_5px_0px_0px_rgba(0,0,0,0.2)] disabled:bg-zinc-200 disabled:shadow-[0_5px_0px_0px_rgba(0,0,0,0.2)] disabled:text-zinc-600"
+        >
+            {" "}
+            StakeScript
+        </button>
+    );
+}
